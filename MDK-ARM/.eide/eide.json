@@ -2,7 +2,11 @@
   "name": "Thermal_imaging_camera",
   "type": "ARM",
   "dependenceList": [],
-  "srcDirs": [],
+  "srcDirs": [
+    "../Bsp",
+    "../APP",
+    "../Lib/InterpolationFunctions"
+  ],
   "virtualFolder": {
     "name": "<virtual_root>",
     "files": [],
@@ -261,14 +265,18 @@
     ]
   },
   "outDir": "build",
-  "deviceName": null,
-  "packDir": null,
+  "deviceName": "STM32F407VETx",
+  "packDir": ".pack/Keil/STM32F4xx_DFP.2.14.0",
   "miscInfo": {
     "uid": "ca88f3fc8c48ab5f257c057ed378d9fd"
   },
   "targets": {
     "Thermal_imaging_camera": {
-      "excludeList": [],
+      "excludeList": [
+        "<virtual_root>/::CMSIS/arm_cortexM4lf_math.lib",
+        "<virtual_root>/LIB/arm_cortexM4lf_math.lib",
+        "<virtual_root>/Dsp"
+      ],
       "toolchain": "AC6",
       "compileConfig": {
         "cpuType": "Cortex-M4",
@@ -349,12 +357,23 @@
           "../Drivers/CMSIS/Device/ST/STM32F4xx/Include",
           "../Drivers/CMSIS/Include",
           ".cmsis/include",
-          "RTE/_Thermal_imaging_camera"
+          "RTE/_Thermal_imaging_camera",
+          "../Bsp/DS3231",
+          "../Bsp/ST7789",
+          "../Bsp/MLX90640/headers",
+          "../APP/Inc",
+          "../Lib/Include/dsp",
+          "../Lib/Include"
         ],
         "libList": [],
         "defineList": [
           "USE_HAL_DRIVER",
-          "STM32F407xx"
+          "STM32F407xx",
+          "ARM_MATH_CM4",
+          "__FPU_USED",
+          "___CC_ARM",
+          "ARM_MATH_MATRIX_CHECK",
+          "ARM_MATH_ROUNDING"
         ]
       },
       "builderOptions": {
