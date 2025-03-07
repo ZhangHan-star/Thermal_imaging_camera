@@ -30,6 +30,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "coreapp.h"
+#include "w25qxx.h"
+#include "st7789.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,7 +52,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+W25QXX_HandleTypeDef w25q64;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,6 +105,7 @@ int main(void)
   MX_TIM12_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  w25qxx_init(&w25q64,&hspi2,SPI2_CS_GPIO_Port,SPI2_CS_Pin);
   coreapp_init();
 
 

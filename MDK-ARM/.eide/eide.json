@@ -344,6 +344,7 @@
       "custom_dep": {
         "name": "default",
         "incList": [
+          ".",
           "../Core/Inc",
           "../FATFS/Target",
           "../FATFS/App",
@@ -363,7 +364,8 @@
           "../Bsp/MLX90640/headers",
           "../APP/Inc",
           "../Lib/Include/dsp",
-          "../Lib/Include"
+          "../Lib/Include",
+          "../Bsp/W25Qxx"
         ],
         "libList": [],
         "defineList": [

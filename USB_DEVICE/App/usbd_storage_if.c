@@ -22,7 +22,7 @@
 #include "usbd_storage_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include "w25qxx.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,7 +31,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+extern W25QXX_HandleTypeDef w25q64;
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -62,12 +62,14 @@
   * @{
   */
 
-#define STORAGE_LUN_NBR                  1
-#define STORAGE_BLK_NBR                  0x10000
-#define STORAGE_BLK_SIZ                  0x200
+// #define STORAGE_LUN_NBR                  1
+// #define STORAGE_BLK_NBR                  0x10000
+// #define STORAGE_BLK_SIZ                  0x200
 
 /* USER CODE BEGIN PRIVATE_DEFINES */
-
+#define STORAGE_LUN_NBR                  1
+#define STORAGE_BLK_NBR                  2048
+#define STORAGE_BLK_SIZ                  4096
 /* USER CODE END PRIVATE_DEFINES */
 
 /**
@@ -210,7 +212,7 @@ int8_t STORAGE_IsReady_FS(uint8_t lun)
 {
   /* USER CODE BEGIN 4 */
   UNUSED(lun);
-
+  if(w25q64.device_id != 0x4017)return (USBD_FAIL);
   return (USBD_OK);
   /* USER CODE END 4 */
 }
@@ -241,10 +243,11 @@ int8_t STORAGE_Read_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t bl
 {
   /* USER CODE BEGIN 6 */
   UNUSED(lun);
-  UNUSED(buf);
-  UNUSED(blk_addr);
-  UNUSED(blk_len);
-
+  // UNUSED(buf);
+  // UNUSED(blk_addr);
+  // UNUSED(blk_len);
+  W25QXX_result_t res;
+  res = w25qxx_read(&w25q64, blk_addr * STORAGE_BLK_SIZ, buf, blk_len * STORAGE_BLK_SIZ);
   return (USBD_OK);
   /* USER CODE END 6 */
 }
@@ -261,10 +264,11 @@ int8_t STORAGE_Write_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t b
 {
   /* USER CODE BEGIN 7 */
   UNUSED(lun);
-  UNUSED(buf);
-  UNUSED(blk_addr);
-  UNUSED(blk_len);
-
+  // UNUSED(buf);
+  // UNUSED(blk_addr);
+  // UNUSED(blk_len);
+  W25QXX_result_t res;
+  res = w25qxx_write(&w25q64, blk_addr * STORAGE_BLK_SIZ, buf, blk_len * STORAGE_BLK_SIZ);
   return (USBD_OK);
   /* USER CODE END 7 */
 }
