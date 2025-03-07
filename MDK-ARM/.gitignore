@@ -9,6 +9,7 @@
 /bin
 /obj
 /out
+/.pack
 
 # eide template
 *.ept
