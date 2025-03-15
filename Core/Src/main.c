@@ -105,7 +105,36 @@ int main(void)
   MX_TIM12_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  w25qxx_init(&w25q64,&hspi2,SPI2_CS_GPIO_Port,SPI2_CS_Pin);
+  HAL_Delay(100);
+  char buf[256];
+  // 初始化屏幕
+  ST7789_Init();
+  sprintf(buf, "ST7789 Init");
+  ST7789_WriteString(0, 0, buf, Font_11x18, WHITE, BLACK);
+
+  sprintf(buf, "Start... ");
+  ST7789_WriteString(0, 18, buf, Font_11x18, WHITE, BLACK);
+
+  w25qxx_init(&w25q64, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
+  if (w25q64.device_id != 0x00 && w25q64.device_id != 0xFF) {
+    sprintf(buf, "W25Qxx Init,ID:0x%04x ",w25q64.device_id);
+  }else {
+    sprintf(buf, "W25Qxx Init Failed ");
+  }
+  ST7789_WriteString(0, 36, buf, Font_11x18, WHITE, BLACK);
+
+  HAL_Delay(1000);
+
+  FRESULT res;
+  res = f_mount(&USERFatFS, "0:", 1);
+  if (res == FR_OK) {
+    sprintf(buf,"Mounted successfully.  ");
+  }
+  else {
+    sprintf(buf,"Failed to mount.Error:%d  ", res);
+  }
+  ST7789_WriteString(0, 54, buf, Font_11x18, WHITE, BLACK);
+
   coreapp_init();
 
 

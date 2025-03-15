@@ -102,16 +102,17 @@
                         "path": "../USB_DEVICE/App/usbd_storage_if.c"
                       }
                     ],
-                    "folders": []
-                  },
-                  {
-                    "name": "Target",
-                    "files": [
+                    "folders": [
                       {
-                        "path": "../USB_DEVICE/Target/usbd_conf.c"
+                        "name": "Target",
+                        "files": [
+                          {
+                            "path": "../USB_DEVICE/Target/usbd_conf.c"
+                          }
+                        ],
+                        "folders": []
                       }
-                    ],
-                    "folders": []
+                    ]
                   }
                 ]
               }

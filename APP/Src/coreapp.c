@@ -11,9 +11,12 @@
 
 #include "coreapp.h"
 #include "stdio.h"
+#include "fatfs.h"
 
 #include "st7789.h"
 #include "MLX90640_API.h"
+#include "DS3231.h"
+#include "bmp.h"
 #include "DS3231.h"
 
 #include "dsp/interpolation_functions.h"
@@ -35,8 +38,11 @@
 #error "IMAGE_HEIGHT must be divisible by DEF_SEG"
 #endif
 
+
  // 将归一化后的数据转换为适合rgb565格式的色彩数值
 void GrayToPseColor(uint8_t grayValue, uint8_t* colorR, uint8_t* colorG, uint8_t* colorB);
+void set_bmp_header(FIL *file, char *FILE_NAME);
+void set_bmp_write_image(FIL *file, uint16_t *image);
 
 // MLX90640相关数据
 unsigned short EE[832];
@@ -46,6 +52,7 @@ float Vdd, Ta, Tr;
 
 //原始温度数据缓冲区
 float raw_data[32 * 24];
+float temp[768];
 //最大最小温度
 float max_temp, min_temp;
 
@@ -71,27 +78,32 @@ uint8_t R, G, B;
 arm_bilinear_interp_instance_f32 bilinearInterp;
 
 //
+uint8_t shutter_flag = 0;
+FIL bmp_file;
+
+extern struct time now;
+
 char str[50];
 
 void coreapp_init(void)
 {
-  // 初始化屏幕
-  ST7789_Init();
-  sprintf(str, "ST7789 Init");
-  ST7789_WriteString(0, 0, str, Font_11x18, BLACK, WHITE);
-  HAL_Delay(1000);
   // 初始化MLX90640
-  MLX90640_SetRefreshRate(0x33, 3); //测量速率 1Hz(0~7 对应 0.5,1,2,4,8,16,32,64Hz)
+  MLX90640_SetRefreshRate(0x33, 4); //测量速率 1Hz(0~7 对应 0.5,1,2,4,8,16,32,64Hz)
   MLX90640_DumpEE(0x33, EE); //读取像素校正参数
   MLX90640_ExtractParameters(EE, &MLXPars); //解析校正参数（计算温度时需要）
   sprintf(str, "MLX90640 Init");
-  ST7789_WriteString(0, 0, str, Font_11x18, BLACK, WHITE);
+  ST7789_WriteString(0, 72, str, Font_11x18, BLACK, WHITE);
   // 双线性插值结构体初始化
   bilinearInterp.numCols = 32;
   bilinearInterp.numRows = 24;
-  bilinearInterp.pData = raw_data;
+  bilinearInterp.pData = temp;
   sprintf(str, "bilinearInterp Init");
-  ST7789_WriteString(0, 0, str, Font_11x18, BLACK, WHITE);
+  ST7789_WriteString(0, 90, str, Font_11x18, BLACK, WHITE);
+
+  sprintf(str, "CoreApp Init");
+  ST7789_WriteString(0, 126, str, Font_11x18, WHITE, BLACK);
+
+  HAL_Delay(1000);
 }
 
 
@@ -103,7 +115,18 @@ void coreapp_loop(void)
   {
     ST7789_WriteString(0, 0, "GetFrameData Failed", Font_11x18, WHITE, BLACK);
     // 添加适当的延时，避免忙等待
-    HAL_Delay(1000); 
+    HAL_Delay(1000);
+  }
+
+  get_time();
+  sprintf(str, "%02d-%02d %02d:%02d:%02d", now.mon, now.day, now.hour, now.min, now.sec);
+  ST7789_WriteString(150, 204, str, Font_11x18, WHITE, BLACK);
+
+  if (HAL_GPIO_ReadPin(SW_OK_GPIO_Port, SW_OK_Pin) == GPIO_PIN_RESET){
+    shutter_flag = 1;
+    char file_name[15];
+    sprintf(file_name, "%2d%2d%2d.bmp", now.hour, now.min, now.sec);
+    set_bmp_header(&bmp_file, file_name);
   }
   Vdd = MLX90640_GetVdd(Frame, &MLXPars); //计算 Vdd（这句可有可无）
   Ta = MLX90640_GetTa(Frame, &MLXPars); //计算实时外壳温度
@@ -118,10 +141,29 @@ void coreapp_loop(void)
     if (raw_data[i] > max_temp)max_temp = raw_data[i];
     else if (raw_data[i] < min_temp)min_temp = raw_data[i];
   }
-  // sprintf(str, "maxtemp:%.2f", max_temp);
-  // ST7789_WriteString(0, 20, str, Font_11x18, WHITE, BLACK);
-  // sprintf(str, "mintemp:%.2f", min_temp);
-  // ST7789_WriteString(0, 40, str, Font_11x18, WHITE, BLACK);
+  sprintf(str, "maxtemp:%.2f", max_temp);
+  ST7789_WriteString(0, 204, str, Font_11x18, WHITE, BLACK);
+  sprintf(str, "mintemp:%.2f", min_temp);
+  ST7789_WriteString(0, 222, str, Font_11x18, WHITE, BLACK);
+
+
+  for (uint8_t h = 0; h < 24; h++)
+  {
+    for (uint8_t w = 0; w < 32; w++)
+    {
+      temp[(23-h)*32+w] = raw_data[h*32+w];
+    }
+  }
+  // for (uint8_t h = 0; h < 24; h++)
+  // {
+  //   for (uint8_t w = 0; w < 32; w++)
+  //   {
+  //     raw_data[h*32+w] = temp[h*32+w];
+  //   }
+  // }
+
+
+
   //进行插值处理
   for (uint8_t n = 0; n < 4; n++)
   {
@@ -137,10 +179,23 @@ void coreapp_loop(void)
         union_color_t.g = G;
         union_color_t.b = B;
         image_data[h * 272 + w] = union_color_t.raw;
-        image_data[h * 272 + w] = (image_data[h*272+w]<<8 | image_data[h*272+w]>>8);
+        image_data[h * 272 + w] = (image_data[h * 272 + w] << 8 | image_data[h * 272 + w] >> 8);
       }
     }
-    ST7789_DrawImage(0, n*51, 272, 51, image_data);
+    ST7789_DrawImage(0, n * 51, 272, 51, image_data);
+    for (uint16_t i = 0; i < 13872; i++)
+    {
+      image_data[i] = (image_data[i] << 8 | image_data[i] >> 8);
+    }
+
+    if(shutter_flag == 1)set_bmp_write_image(&bmp_file,image_data);
+  }
+  if(shutter_flag == 1){
+    f_close(&bmp_file);
+    sprintf(str,"Save Success!");
+    ST7789_WriteString(0, 100, str, Font_11x18, WHITE, BLACK);
+    HAL_Delay(1000);
+    shutter_flag = 0;
   }
 }
 
@@ -180,4 +235,92 @@ void GrayToPseColor(uint8_t grayValue, uint8_t* colorR, uint8_t* colorG, uint8_t
     *colorG = (uint8_t)((float)(255 - grayValue) / 64.0f * 63.0f);
     *colorB = 0;
   }
+}
+
+void set_bmp_header(FIL *file, char *FILE_NAME)
+{
+  FRESULT res;
+  bmp_all_header_t bmp;
+  UINT bytes_written;  // 写入的字节数
+  UINT bytes_read;     // 读取的字节数
+  char read_buffer[100];  // 读取缓冲区
+  char str[256];
+
+  res = f_open(file, FILE_NAME, FA_WRITE | FA_CREATE_ALWAYS);
+  if (res == FR_OK) {
+    sprintf(str,"File created successfully.\n");
+    ST7789_WriteString(0,100,str,Font_11x18,WHITE,BLACK);
+  } else {
+    sprintf(str,"Failed to create file.Error:%d\n",res);
+    ST7789_WriteString(0,100,str,Font_11x18,WHITE,BLACK);
+    shutter_flag = 0;
+    HAL_Delay(1000);
+    return;
+  }
+
+  bmp.file_header.bfType = 0x4D42;
+  bmp.file_header.bfSize = 54 + 272 * 204 * 2;
+  bmp.file_header.bfReserved1 = 0;
+  bmp.file_header.bfReserved2 = 0;
+  bmp.file_header.bfOffBits = 54;
+
+  bmp.info_header.biSize = 40;
+  bmp.info_header.biWidth = 272;
+  bmp.info_header.biHeight = -204;
+  bmp.info_header.biPlanes = 1;
+  bmp.info_header.biBitCount = 16;
+  bmp.info_header.biCompression = 3;
+  bmp.info_header.biSizeImage = 272 * 204 * 2;
+  bmp.info_header.biXPelsPerMeter = 0;
+  bmp.info_header.biYPelsPerMeter = 0;
+  bmp.info_header.biClrImportant = 0;
+  bmp.info_header.biClrUsed = 0;
+
+  bmp.RGB565_mask[0].rgbBlue = 0;
+  bmp.RGB565_mask[0].rgbGreen =0xF8;
+  bmp.RGB565_mask[0].rgbRed = 0;
+  bmp.RGB565_mask[0].rgbReserved = 0;
+
+  bmp.RGB565_mask[1].rgbBlue = 0XE0;
+  bmp.RGB565_mask[1].rgbGreen = 0X07;
+  bmp.RGB565_mask[1].rgbRed = 0;
+  bmp.RGB565_mask[1].rgbReserved = 0;
+
+  bmp.RGB565_mask[2].rgbBlue = 0x1F;
+  bmp.RGB565_mask[2].rgbGreen = 0;
+  bmp.RGB565_mask[2].rgbRed = 0;
+  bmp.RGB565_mask[2].rgbReserved = 0;
+
+  res = f_write(file, &bmp, sizeof(bmp), &bytes_written);
+  if (res == FR_OK) {
+    sprintf(str,"File written successfully.");
+    ST7789_WriteString(0,118,str, Font_11x18, WHITE, BLACK);
+  } else {
+    sprintf(str,"Failed to write file.Error:%d",res);
+    ST7789_WriteString(0,118,str, Font_11x18, WHITE, BLACK);
+    shutter_flag = 0;
+    f_close(file);
+    HAL_Delay(1000);
+    return;
+  }
+}
+
+void set_bmp_write_image(FIL *file, uint16_t *image)
+{
+  UINT bytes_written;  // 写入的字节数
+  FRESULT res;
+  res = f_write(file, image, 272 * 51 * 2, &bytes_written);
+  if (res == FR_OK)
+  {
+    sprintf(str,"Write file successfully.");
+    ST7789_WriteString(0,136,str, Font_11x18, WHITE, BLACK);
+  } else{
+    sprintf(str,"Failed to write file.Error:%d",res);
+    ST7789_WriteString(0,136,str, Font_11x18, WHITE, BLACK);
+    f_close(file);
+    shutter_flag = 0;
+    HAL_Delay(1000);
+    return;
+  }
+
 }

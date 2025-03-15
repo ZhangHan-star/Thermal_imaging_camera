@@ -67,6 +67,8 @@ void Error_Handler(void);
 #define ST7789_DC_GPIO_Port GPIOA
 #define ST7789_RST_Pin GPIO_PIN_4
 #define ST7789_RST_GPIO_Port GPIOC
+#define SW_OK_Pin GPIO_PIN_5
+#define SW_OK_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 

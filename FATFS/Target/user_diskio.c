@@ -35,11 +35,14 @@
 /* Includes ------------------------------------------------------------------*/
 #include <string.h>
 #include "ff_gen_drv.h"
-
+#include "w25qxx.h"
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-
+#define STORAGE_LUN_NBR                  1
+#define STORAGE_BLK_NBR                  2048
+#define STORAGE_BLK_SIZ                  4096
 /* Private variables ---------------------------------------------------------*/
+extern W25QXX_HandleTypeDef w25q64;
 /* Disk status */
 static volatile DSTATUS Stat = STA_NOINIT;
 
@@ -82,6 +85,11 @@ DSTATUS USER_initialize (
 {
   /* USER CODE BEGIN INIT */
     Stat = STA_NOINIT;
+    if(w25q64.device_id != 0x4017){
+      Stat = STA_NOINIT;
+    }else {
+    Stat &= ~STA_NOINIT;
+    }
     return Stat;
   /* USER CODE END INIT */
 }
@@ -97,6 +105,7 @@ DSTATUS USER_status (
 {
   /* USER CODE BEGIN STATUS */
     Stat = STA_NOINIT;
+    Stat &= ~STA_NOINIT;
     return Stat;
   /* USER CODE END STATUS */
 }
@@ -117,6 +126,7 @@ DRESULT USER_read (
 )
 {
   /* USER CODE BEGIN READ */
+    w25qxx_read(&w25q64, sector<<12, buff, count<<12);
     return RES_OK;
   /* USER CODE END READ */
 }
@@ -139,6 +149,7 @@ DRESULT USER_write (
 {
   /* USER CODE BEGIN WRITE */
   /* USER CODE HERE */
+    w25qxx_write(&w25q64, sector<<12, (uint8_t *)buff, count<<12);
     return RES_OK;
   /* USER CODE END WRITE */
 }
@@ -160,6 +171,33 @@ DRESULT USER_ioctl (
 {
   /* USER CODE BEGIN IOCTL */
     DRESULT res = RES_ERROR;
+    switch (cmd)
+    {
+    case CTRL_SYNC:
+      res = RES_OK;
+      break;
+
+      case GET_SECTOR_COUNT:
+      {
+        *(DWORD*)buff = STORAGE_BLK_NBR;
+        res = RES_OK;
+      }break;
+
+      case GET_SECTOR_SIZE:
+      {
+        *(WORD*)buff = STORAGE_BLK_SIZ;
+        res = RES_OK;
+      }break;
+
+      case GET_BLOCK_SIZE:
+      {
+        *(DWORD*)buff = 16;
+        res = RES_OK;
+      }break;
+
+    default:
+      break;
+    }
     return res;
   /* USER CODE END IOCTL */
 }
