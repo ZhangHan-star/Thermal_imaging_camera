@@ -3,3 +3,4 @@ build/Debug/.cmake/api/v1/query/client-vscode/query.json
 build/Debug/CMakeFiles/cmake.check_cache
 Thermal_imaging_camera
 image/
+MDK-ARM.code-workspace
