@@ -39,8 +39,21 @@
 #endif
 
 
+// 色彩方案枚举
+typedef enum {
+  COLOR_SCHEME_COLD_HOT,  // 冷热色调
+  COLOR_SCHEME_IRON,      // 铁红色
+  COLOR_SCHEME_GRAYSCALE, // 灰度
+  COLOR_SCHEME_MAX
+} ColorScheme;
+
+// RGB565颜色分量宏
+#define SCALE_R 0x1F  // 5bit最大值
+#define SCALE_G 0x3F  // 6bit最大值
+#define SCALE_B 0x1F
+
  // 将归一化后的数据转换为适合rgb565格式的色彩数值
-void GrayToPseColor(uint8_t grayValue, uint8_t* colorR, uint8_t* colorG, uint8_t* colorB);
+uint16_t Gray16ToRGB565(uint16_t gray, ColorScheme scheme);
 void set_bmp_header(FIL *file, char *FILE_NAME);
 void set_bmp_write_image(FIL *file, uint16_t *image);
 
@@ -61,7 +74,7 @@ uint16_t image_data[272 * 51];
 //临时存储的插值结果
 float temp_interp;
 //临时存储归一化数据
-uint8_t temp_norma;
+uint16_t temp_norma;
 
 //共用体，用于将色彩数据转换为16位RGB565格式
 union color {
@@ -104,6 +117,8 @@ void coreapp_init(void)
   ST7789_WriteString(0, 126, str, Font_11x18, WHITE, BLACK);
 
   HAL_Delay(1000);
+
+  ST7789_Fill_Color(BLACK);
 }
 
 
@@ -120,7 +135,7 @@ void coreapp_loop(void)
 
   get_time();
   sprintf(str, "%02d-%02d %02d:%02d:%02d", now.mon, now.day, now.hour, now.min, now.sec);
-  ST7789_WriteString(150, 204, str, Font_11x18, WHITE, BLACK);
+  ST7789_WriteString(0, 0, str, Font_11x18, WHITE, BLACK);
 
   if (HAL_GPIO_ReadPin(SW_OK_GPIO_Port, SW_OK_Pin) == GPIO_PIN_RESET){
     shutter_flag = 1;
@@ -141,10 +156,10 @@ void coreapp_loop(void)
     if (raw_data[i] > max_temp)max_temp = raw_data[i];
     else if (raw_data[i] < min_temp)min_temp = raw_data[i];
   }
-  sprintf(str, "maxtemp:%.2f", max_temp);
-  ST7789_WriteString(0, 204, str, Font_11x18, WHITE, BLACK);
-  sprintf(str, "mintemp:%.2f", min_temp);
-  ST7789_WriteString(0, 222, str, Font_11x18, WHITE, BLACK);
+  sprintf(str, "max:%.2f'C ", max_temp);
+  ST7789_WriteString(170,  0, str, Font_7x10, WHITE, BLACK);
+  sprintf(str, "min:%.2f'C ", min_temp);
+  ST7789_WriteString(170, 10, str, Font_7x10, WHITE, BLACK);
 
 
   for (uint8_t h = 0; h < 24; h++)
@@ -173,16 +188,17 @@ void coreapp_loop(void)
       {
         // temp_interp = arm_bilinear_interp_f32(&bilinearInterp, (float)(w / INTERP_COEFF_W), (float)((h + n * (IMAGE_HEIGHT / DEF_SEG)) / INTERP_COEFF_H));
         temp_interp = arm_bilinear_interp_f32(&bilinearInterp, (float)(w / 8.741935f), (float)((h + n * 51) / 8.826086));
-        temp_norma = (uint8_t)((temp_interp - min_temp) / (max_temp - min_temp) * 255);
-        GrayToPseColor(temp_norma, &R, &G, &B);
-        union_color_t.r = R;
-        union_color_t.g = G;
-        union_color_t.b = B;
-        image_data[h * 272 + w] = union_color_t.raw;
+        temp_norma = (uint16_t)((temp_interp - min_temp) / (max_temp - min_temp) * 65535);
+        // GrayToPseColor(temp_norma, 3, &R, &G, &B);
+        // union_color_t.r = R;
+        // union_color_t.g = G;
+        // union_color_t.b = B;
+        // image_data[h * 272 + w] = union_color_t.raw;
+        image_data[h * 272 + w] = Gray16ToRGB565(temp_norma, COLOR_SCHEME_COLD_HOT);
         image_data[h * 272 + w] = (image_data[h * 272 + w] << 8 | image_data[h * 272 + w] >> 8);
       }
     }
-    ST7789_DrawImage(0, n * 51, 272, 51, image_data);
+    ST7789_DrawImage(0, n * 51 + 20, 272, 51, image_data);
     for (uint16_t i = 0; i < 13872; i++)
     {
       image_data[i] = (image_data[i] << 8 | image_data[i] >> 8);
@@ -201,40 +217,79 @@ void coreapp_loop(void)
 
 
 
-void GrayToPseColor(uint8_t grayValue, uint8_t* colorR, uint8_t* colorG, uint8_t* colorB)
-{
-  if (colorR == NULL || colorG == NULL || colorB == NULL)
-  {
-    ST7789_WriteString(0, 0, "Error:", Font_16x26, RED, BLACK);
-    return;
-  }
 
-  // float grayValue;
-  // grayValue = grayValue1;
-  if ((grayValue >= 0) && (grayValue <= 63))
-  {
-    *colorR = 0;
-    *colorG = 0;
-    *colorB = (uint8_t)((float)grayValue / 64.0f * 31.0f);
-  }
-  else if ((grayValue >= 64) && (grayValue <= 127))
-  {
-    *colorR = 0;
-    *colorG = (uint8_t)((float)(grayValue - 64) / 64.0f * 63.0f);
-    *colorB = (uint8_t)((float)(127 - grayValue) / 64.0f * 31.0f);
-  }
-  else if ((grayValue >= 128) && (grayValue <= 191))
-  {
-    *colorR = (uint8_t)((float)(grayValue - 128) / 64.0f * 31.0f);
-    *colorG = 255;
-    *colorB = 0;
-  }
-  else if ((grayValue >= 192) && (grayValue <= 255))
-  {
-    *colorR = 127;
-    *colorG = (uint8_t)((float)(255 - grayValue) / 64.0f * 63.0f);
-    *colorB = 0;
-  }
+
+// 主转换函数（纯整数运算）
+uint16_t Gray16ToRGB565(uint16_t gray, ColorScheme scheme) {
+    uint8_t r = 0, g = 0, b = 0;
+
+    switch(scheme) {
+        // ======== 冷热色调方案 ========
+        case COLOR_SCHEME_COLD_HOT: {
+            const uint32_t seg = 16384; // 65536/4
+            const uint32_t seg2= 32768;
+            const uint32_t seg3= 49151;
+            if(gray < seg) {            // 黑→蓝
+                b = (gray * SCALE_B) >> 14; // 16384=2^14
+            }
+            else if(gray < seg2) {     // 蓝→青
+                g = ((gray - seg) * SCALE_G) >> 14;
+                b = ((seg2 - gray) * SCALE_B) >> 14;
+            }
+            else if(gray < seg3) {     // 青→黄
+                uint32_t val = gray - seg2;
+                r = (val * SCALE_R) >> 14;
+                g = SCALE_G;
+            }
+            else {                      // 黄→红→白
+                uint32_t val = gray - seg3;
+                g = ((65535 - gray) * SCALE_G) >> 14;
+                b = ((gray - seg3) * SCALE_B) >> 14;
+                r = SCALE_R;
+            }
+            break;
+        }
+
+        // ======== 铁红色方案 ========
+        case COLOR_SCHEME_IRON: {
+            // 非线性分段：30%低温区，40%中温区，30%高温区
+            const uint32_t low_th  = 19660;  // 0.3*65535
+            const uint32_t high_th = 45874;  // 0.7*65535
+
+            if(gray < low_th) {         // 黑→暗红
+                r = (gray * SCALE_R) / low_th;
+            }
+            else if(gray < high_th) {  // 红→橙
+                uint32_t val = gray - low_th;
+                r = SCALE_R;
+                g = (val * SCALE_G) / (high_th - low_th);
+            }
+            else {                     // 橙→白
+                uint32_t val = gray - high_th;
+                r = SCALE_R;
+                g = SCALE_G;
+                b = (val * SCALE_B) / (65535 - high_th);
+            }
+            break;
+        }
+
+        // ======== 灰度方案 ========
+        case COLOR_SCHEME_GRAYSCALE: {
+            // 绿色通道精度更高（6bit）
+            uint8_t gray5  = gray >> 11;        // 5bit
+            uint8_t gray6  = gray >> 10;        // 6bit
+            r = gray5;
+            g = gray6;
+            b = gray5;
+            break;
+        }
+
+        default: // 默认冷热色调
+            return Gray16ToRGB565(gray, COLOR_SCHEME_COLD_HOT);
+    }
+
+    // 打包为RGB565格式
+    return (r << 11) | (g << 5) | b;
 }
 
 void set_bmp_header(FIL *file, char *FILE_NAME)
