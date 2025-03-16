@@ -93,6 +93,7 @@ arm_bilinear_interp_instance_f32 bilinearInterp;
 //
 uint8_t shutter_flag = 0;
 FIL bmp_file;
+uint8_t color_flag = 0;//色彩方案选择标志位
 
 extern struct time now;
 
@@ -136,6 +137,16 @@ void coreapp_loop(void)
   get_time();
   sprintf(str, "%02d-%02d %02d:%02d:%02d", now.mon, now.day, now.hour, now.min, now.sec);
   ST7789_WriteString(0, 0, str, Font_11x18, WHITE, BLACK);
+
+  //色彩映射选择
+  if (HAL_GPIO_ReadPin(SW2_LF_GPIO_Port, SW2_LF_Pin) == GPIO_PIN_RESET){
+    color_flag++;
+    if(color_flag >= COLOR_SCHEME_MAX)color_flag = 0;
+  }else if (HAL_GPIO_ReadPin(SW2_RG_GPIO_Port, SW2_RG_Pin) == GPIO_PIN_RESET)
+  {
+    color_flag--;
+    if(color_flag >= COLOR_SCHEME_MAX)color_flag = 2;
+  }
 
   if (HAL_GPIO_ReadPin(SW_OK_GPIO_Port, SW_OK_Pin) == GPIO_PIN_RESET){
     shutter_flag = 1;
@@ -194,7 +205,7 @@ void coreapp_loop(void)
         // union_color_t.g = G;
         // union_color_t.b = B;
         // image_data[h * 272 + w] = union_color_t.raw;
-        image_data[h * 272 + w] = Gray16ToRGB565(temp_norma, COLOR_SCHEME_COLD_HOT);
+        image_data[h * 272 + w] = Gray16ToRGB565(temp_norma, color_flag);
         image_data[h * 272 + w] = (image_data[h * 272 + w] << 8 | image_data[h * 272 + w] >> 8);
       }
     }
