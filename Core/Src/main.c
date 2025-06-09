@@ -32,6 +32,7 @@
 #include "coreapp.h"
 #include "w25qxx.h"
 #include "st7789.h"
+#include "DS3231.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -105,6 +106,15 @@ int main(void)
   MX_TIM12_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  // Writetime(DS3231_YEAR_REG,25);
+  // Writetime(DS3231_MONTH_CENTURY_REG,3);
+  // Writetime(DS3231_DAY_REG,7);
+  // Writetime(DS3231_DATE_REG,16);
+  // Writetime(DS3231_HOUR_REG,17);
+  // Writetime(DS3231_MINUTES_REG,21);
+  // Writetime(DS3231_SECONDS_REG,00);
+
   HAL_Delay(100);
   char buf[256];
   // 初始化屏幕
