@@ -314,10 +314,10 @@ void set_bmp_header(FIL *file, char *FILE_NAME)
 
   res = f_open(file, FILE_NAME, FA_WRITE | FA_CREATE_ALWAYS);
   if (res == FR_OK) {
-    sprintf(str,"File created successfully.\n");
+    sprintf(str,"File created successfully.");
     ST7789_WriteString(0,100,str,Font_11x18,WHITE,BLACK);
   } else {
-    sprintf(str,"Failed to create file.Error:%d\n",res);
+    sprintf(str,"Failed to create file.Error:%d",res);
     ST7789_WriteString(0,100,str,Font_11x18,WHITE,BLACK);
     shutter_flag = 0;
     HAL_Delay(1000);
