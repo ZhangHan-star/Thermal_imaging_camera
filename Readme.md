@@ -28,6 +28,14 @@
   * 时钟芯片可以显示时间【可以添加文件写入时间，还没实现】
   * IP5306实现电源管理
 
+## 🚧目前已知存在的问题和未添加的功能
+
+  * 连接PC时，读取和写入图像可能会产生冲突导致错误
+  * 保存的bmp文件最左侧会有一列错误数据
+  * 部分像素偶现错误数据，暂未处理
+  * 保存的文件添加保存时间
+  * 没有调整时钟芯片内部时间的程序逻辑，只能通过手动编译下载新程序修改
+
 ## 🔌硬件设计
 
   * STM32F407VET6 单片机
@@ -51,10 +59,10 @@
   4. c口连接电源即可充电，连接至PC可以识别到U盘，能够管理保存的图像。
   5. 拨盘左右拨动可以切换色彩映射方案。
 
-<img src="readme-img/img2.jpg" title="图片title"  width="324" height="576" />　
-<img src="readme-img/img3.jpg" title="图片title"/>　
-<img src="readme-img/img4.jpg" title="图片title"/>　
-
+<img src="readme-img/img2.jpg" title="img2"/>　
+<img src="readme-img/img3.jpg" title="铁红色"/>　
+<img src="readme-img/img4.jpg" title="冷热色调"/>　
+<img src="readme-img/img5.png" title="PC"/>　
 
 ## 项目目录结构
 
