@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="readme-img/img1.jpg"/>
+
 # 热成像相机📷
 
 
@@ -11,13 +13,9 @@
 
 </div>
 
----
-
 ## 🔍项目简介
 
 该项目是一个基于STM32、MLX90640的热成像相机项目，采用STM32F407VET6主控芯片，MLX90640热成像传感器、W25Q64存储芯片。
-
-
 
 ---
 
@@ -52,6 +50,11 @@
   3. 中心按键按下即可保存图像。
   4. c口连接电源即可充电，连接至PC可以识别到U盘，能够管理保存的图像。
   5. 拨盘左右拨动可以切换色彩映射方案。
+
+<img src="readme-img/img2.jpg" title="图片title"  width="324" height="576" />　
+<img src="readme-img/img3.jpg" title="图片title"/>　
+<img src="readme-img/img4.jpg" title="图片title"/>　
+
 
 ## 项目目录结构
 
