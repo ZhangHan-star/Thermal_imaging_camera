@@ -1,6 +1,10 @@
-# 热成像相机📷
+# <center>热成像相机📷
 
-![Static Badge](https://img.shields.io/badge/:badgeContent)
+
+![GitHub Repo stars](https://img.shields.io/github/stars/ZhangHan-star/Thermal_imaging_camera)
+![GitHub forks](https://img.shields.io/github/forks/ZhangHan-star/Thermal_imaging_camera)
+![GitHub last commit](https://img.shields.io/github/last-commit/ZhangHan-star/Thermal_imaging_camera)
+
 
 ---
 
